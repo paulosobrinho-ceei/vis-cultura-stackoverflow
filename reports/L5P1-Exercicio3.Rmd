@@ -1,0 +1,222 @@
+---
+title: "L5P1-Exercício 3"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+library(skimr)
+library(tidymodels)
+library(modelr)
+theme_set(theme_bw())
+```
+
+```{r read}
+dados_raw = read_csv(
+    here::here("data/participation-per-country.csv"),
+    col_types = cols(
+        .default = col_double(),
+        site = col_character(),
+        country = col_character(),
+        geo = col_character(),
+        four_regions = col_character(),
+        eight_regions = col_character(),
+        six_regions = col_character(),
+        `World bank income group 2017` = col_character()
+    )
+) %>% janitor::clean_names()
+
+
+dados = dados_raw %>% 
+    filter(site == "StackOverflow" || site == "SuperUser")
+
+glimpse(dados)
+```
+
+```{r}
+relacao_dados_StackOverflow = dados %>%
+    filter (is.na(gni) == FALSE, site == "StackOverflow") %>%
+    select(country, site, gni, responderam_prop)
+```
+
+
+<!--
+3. Descreva a relação entre GNI (produto interno bruto per cápita) dos países e a taxa de pessoas daquele país que responderam alguma pergunta no StackOverflow. 
+-->
+
+
+
+```{r}
+relacao_dados_StackOverflow %>%
+
+ggplot(aes(x = gni, y = responderam_prop)) +
+  geom_point(size = 5, alpha = .5, color = "coral") +
+  geom_hline(yintercept = mean(relacao_dados_StackOverflow$responderam_prop), color = "red") + 
+  geom_vline(xintercept = mean(relacao_dados_StackOverflow$gni), color = "red") +
+    
+    
+  labs(x = "gni", y = "responderam_prop",
+       title = "Relationship between gni e responderam_prop") 
+
+```
+
+---
+
+O Gráfico de dispersão parece indicar uma relação positiva entre GNI e taxa de pessoas daquele país que responderam alguma pergunta no StackOverflow. Entretanto, parece não ser uma relação linear nas variáveis. 
+Para encontrar a reta que melhor se ajusta aos dados, emprega-se o método de Mínimos Quadrados Ordinários (MQO). Esse método minimiza a função que é o somatório dos erros aleatórios ao quadrado. O erro aleatório do modelo é dado por: ei= Yi - Yiestim, onde ei é erro aleatório, Yi é o valor da variável dependente na amostra/real/efetivo e Yiestim é o valor do Y estimado pela reta de regressão. O primeiro modelo estimado é dado abaixo. A reta estimada, que mostra a associação entre as variáveis taxa de pessoas que responderam (Y) e fluência de inglês na população do país (X) é dada por: Y = 4.482229e-01 + 2.478583e-06 X (Yi=b0 +b1.X). O coeficiente de determinação (R^2) mostra quanto da variação do Y é explicada pela variação de X. Nesse primeiro modelo, o R^2 (R-squared) foi de 0.3162905 ou de 31,62%, isto é, 31,62% das variações na taxa de pessoas que responderam são explicadas pelas variações no produto interno bruto per cápita. Um aumento de $1  no produto interno bruto per cápita (X) provoca um aumento de 2.478583e-06 na proporção de pessoas que responderam. Esse impacto na população pode-se ser visto por meio do intervalo de confiança para (B1), que é o parâmetro populacional. Isto é, o impacto na fluência de inglês sobre a taxa de pessoas que responderam está no intervalo de [1.634494e-06	3.322671e-06] com probabilidade de 95%IC.
+
+---
+
+
+```{r}
+mod1 = lm (responderam_prop ~ gni, data = relacao_dados_StackOverflow)
+tidy(mod1)
+glance(mod1)
+mod1
+
+```
+```{r}
+mod1 %>% 
+    augment(relacao_dados_StackOverflow)
+
+```
+
+---
+
+GRÁFICO COM O Y real e y ESTIMADO
+
+---
+
+
+
+```{r}
+
+mod1 %>%
+    augment(relacao_dados_StackOverflow) %>%
+    ggplot(mapping =  aes(x = gni)) +
+    geom_point(aes(y = responderam_prop), alpha = 0.4, size = .1) +
+    geom_line(aes(y = .fitted), colour = "red") 
+    NULL
+```
+
+---
+
+Inferência
+
+---
+
+
+```{r}
+
+mod1 %>%
+    tidy(conf.int = T, conf.level = 0.95) %>%
+    select(-p.value)
+
+```
+
+ 
+
+
+
+<!--
+===============================================================================
+                     Modelo utlizando o log das variaveis
+===============================================================================
+-->
+
+---
+
+Modelo utlizando o log das variaveis
+
+---
+
+
+---
+
+O gráfico de dispersão mostra comportamentos das variáveis respoderam_prop e GNI . Considera-se respoderam_prop como variável dependente e GNI como variáveil independente. O gráfico de dispersão mostra uma possível relação positiva entre essas variáveis por visualizar que seus pontos amostrais indicam uma reta positivamente inclinada. Também, é possível que a melhor função matemática que descreva a relação entre essas duas variáveis possa não ser um modelo linear. Inicialmente, estima-se um modelo linear com as variáveis  em nível, ou seja, com seus valores originais. Em seguida, estima-se um modelo transformando as variáveis (dependente e independete) em logarítimo para linearizar essa relação.
+
+---
+
+```{r}
+
+relacao_dados_StackOverflow %>%
+ggplot(aes(x = gni, y = responderam_prop)) +
+  geom_point(size = 5, alpha = .5, color = "coral") +
+
+  labs(x = "gni", y = "responderam_prop",
+       title = "Relationship between gni e responderam_prop") 
+
+
+relacao_dados_StackOverflow2 = relacao_dados_StackOverflow %>%
+    mutate (gni = log (gni), responderam_prop = log(responderam_prop))
+
+
+relacao_dados_StackOverflow2 %>%
+ggplot(aes(x = gni, y = responderam_prop)) +
+  geom_point(size = 5, alpha = .5, color = "coral") +
+
+  labs(x = "log(gni)", y = "log(responderam_prop)",
+       title = "Relação entre log (gni) e log(responderam_prop)") 
+
+
+
+```
+
+
+---
+
+O segundo modelo foi obtido estimando a reta de regressão transformando as variáveis em log. A reta estimada, que mostra a associação entre as variáveis taxa de pessoas que responderam (Y) e GNI na população do país (X) é dada por: logY = -1.7067554 + 0.1066706	 logX (logYi=b0 +b1.logX). O coeficiente de determinação (R^2 ou (R-squared) foi de 0.4261386 ou de 42,61%, isto é, 42,61% das variações na taxa de pessoas que responderam são explicadas pelas variações no GNI.Não indicando um bom ajuste da reta de regressão ou modelo aos dados. Um aumento de 1% no GNI (X) provoca um aumento de 0,1066% na proporção de pessoas que responderam. Esse impacto na população pode-se ser visto por meio do intervalo de confiança para (B1), que é o parâmetro populacional. Isto é, o impacto na fluência de inglês sobre a taxa de pessoas que responderam está no intervalo de [0.07799815	0.135343] com probabilidade de 95%IC.
+
+---
+
+
+```{r}
+mod1 = lm (responderam_prop ~ gni, data = relacao_dados_StackOverflow2)
+tidy(mod1)
+glance(mod1)
+mod1
+
+```
+```{r}
+mod1 %>% 
+    augment(relacao_dados_StackOverflow2)
+
+```
+
+---
+
+GRÁFICO COM O Y real e y ESTIMADO
+
+---
+
+
+```{r}
+
+mod1 %>%
+    augment(relacao_dados_StackOverflow2) %>%
+    ggplot(mapping =  aes(x = gni)) +
+    geom_point(aes(y = responderam_prop), alpha = 0.4, size = .1) +
+    geom_line(aes(y = .fitted), colour = "red") 
+    NULL
+```
+
+
+---
+
+Inferência
+
+---
+
+```{r}
+mod1 %>%
+    tidy(conf.int = T, conf.level = 0.95) %>%
+    select(-p.value)
+
+```
+
+

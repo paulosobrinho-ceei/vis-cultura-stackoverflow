@@ -1,6 +1,8 @@
 ---
 title: "Coeficientes de Correlação"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}

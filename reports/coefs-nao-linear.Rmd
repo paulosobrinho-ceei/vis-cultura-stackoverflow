@@ -8,6 +8,7 @@ Coef. de Spearman (rho)
 Coef. de Kendall (tau)
 
 ```{r}
+library(tidyverse)
 animais = MASS::Animals
 glimpse(animais)
 ```
